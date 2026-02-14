@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { UserService } from "../services/user_service";
-import { RegisterDTO, LoginDTO } from "../dtos/user_dtos";
+import { RegisterDTO, LoginDTO, UpdateUserDto } from "../dtos/user_dtos";
 
 const userService = new UserService();
 
@@ -38,6 +38,32 @@ export const loginUser = async (req: Request, res: Response) => {
     res.status(400).json({
       success: false,
       message,
+    });
+  }
+};
+
+// Update user profile with optional image
+export const updateUserProfile = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updateData = UpdateUserDto.parse(req.body);
+
+    // If file is uploaded, add imageUrl
+    if (req.file) {
+      (updateData as any).imageUrl = `/uploads/${req.file.filename}`;
+    }
+
+    const user = await userService.updateUser(id, updateData);
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: user,
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      success: false,
+      message: error.message || "Failed to update profile",
     });
   }
 };

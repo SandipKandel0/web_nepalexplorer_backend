@@ -5,6 +5,8 @@ import cors from "cors";
 import { connectDB } from "./database/mongodb";
 import { PORT } from "./configs";
 import userRoutes from "./routes/user_route";
+import adminRoutes from "./routes/admin_route";
+import guideRoutes from "./routes/guide_route";
 
 dotenv.config();
 
@@ -12,6 +14,7 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+app.use(express.static("public")); // Serve static files (uploads)
 
 // Enable CORS so frontend can access backend
 app.use(
@@ -22,7 +25,9 @@ app.use(
 );
 
 // Routes
-app.use("/api/users", userRoutes);
+app.use("/api/auth", userRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/guide", guideRoutes);
 
 // Health check
 app.get("/", (req: Request, res: Response) => {
