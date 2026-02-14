@@ -1,45 +1,32 @@
-import bcrypt from "bcryptjs";
+import UserModel from "../models/user";
+import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { UserRepository } from "../repositories/user_repository";
-import { JWT_SECRET } from "../configs"; // Named import
 
-// UserService handles all business logic related to users
 export class UserService {
-  private userRepo: UserRepository;
+  async register(data: any) {
+    // Check if email already exists
+    const existing = await UserModel.findOne({ email: data.email });
+    if (existing) throw new Error("Email already exists");
+    const existingUsername = await UserModel.findOne({ username: data.username });
+    if (existingUsername) throw new Error("Username already exists");
 
-  constructor() {
-    this.userRepo = new UserRepository();
+    // Hash password
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    // Save user
+    const user = await UserModel.create({ ...data, password: hashedPassword });
+    return user;
   }
-async register(data: any) {
-  // Check unique email and username
-  if (await this.userRepo.getUserByEmail(data.email)) {
-    throw new Error("Email already exists");
+
+  async login(email: string, password: string) {
+    const user = await UserModel.findOne({ email });
+    if (!user) throw new Error("User not found");
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) throw new Error("Invalid credentials");
+
+    // Return JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
+    return { user, token };
   }
-  if (await this.userRepo.getUserByUsername(data.username)) {
-    throw new Error("Username already exists");
-  }
-
-  const hashedPassword = await bcrypt.hash(data.password, 10);
-
-  const user = await this.userRepo.createUser({
-    ...data,
-    password: hashedPassword,
-  });
-
-  return user;
-}
-
-async login(email: string, password: string) {
-  const user = await this.userRepo.getUserByEmail(email);
-  if (!user) throw new Error("Invalid credentials");
-
-  const isValid = await bcrypt.compare(password, user.password);
-  if (!isValid) throw new Error("Invalid credentials");
-
-  const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, {
-    expiresIn: "1h",
-  });
-
-  return { user, token };
-}
 }

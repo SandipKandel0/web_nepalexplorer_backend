@@ -1,29 +1,30 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, model } from "mongoose";
 
-// User interface
+// Interface for TypeScript
 export interface IUser extends Document {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   username: string;
   email: string;
-  password: string;
   phoneNumber: string;
+  password: string;
   role: "user" | "admin";
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// User schema
-const userSchema = new Schema<IUser>(
+// Mongoose schema
+const UserSchema: Schema = new Schema<IUser>(
   {
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
+    fullName: { type: String, required: true },
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
+    phoneNumber: { type: String, required: true },
     password: { type: String, required: true },
-    phoneNumber: { type: String, required: true, unique: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
   },
-  { timestamps: true }
+  { timestamps: true } // Automatically adds createdAt and updatedAt
 );
 
-// Export it as UserModel to match repository import
-export const UserModel = mongoose.model<IUser>("User", userSchema);
+// Export the model
+const UserModel = model<IUser>("User", UserSchema);
+export default UserModel;

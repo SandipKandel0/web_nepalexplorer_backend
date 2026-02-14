@@ -1,60 +1,43 @@
 import { Request, Response } from "express";
-import { z } from "zod";
 import { UserService } from "../services/user_service";
+import { RegisterDTO, LoginDTO } from "../dtos/user_dtos";
 
 const userService = new UserService();
 
-const registerSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["user", "admin"]).optional(),
-});
-
-// Login validation
-const loginSchema = z.object({
-  email: z.string().email("Invalid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
 export const registerUser = async (req: Request, res: Response) => {
   try {
-    const parsed = registerSchema.parse(req.body); // Validate request body
-
+    const parsed = RegisterDTO.parse(req.body); // only fullName, username, email, phoneNumber, password, role
     const user = await userService.register(parsed);
-
-    res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      data: user,
-    });
-  } catch (err: any) {
-    res.status(400).json({
+    res.status(201).json({ success: true, data: user });
+  } catch (error: any) {
+    return res.status(400).json({
       success: false,
-      message: err.message || "Registration failed",
+      message: error.errors?.map((e: any) => e.message).join(", ") || error.message,
     });
   }
 };
 
-// Login existing user
 export const loginUser = async (req: Request, res: Response) => {
   try {
-    const parsed = loginSchema.parse(req.body); // Validate request body
+    // Validate request body using DTO
+    const parsed = LoginDTO.parse(req.body);
 
-    const result = await userService.login(parsed.email, parsed.password);
+    // Call service to login user
+    const data = await userService.login(parsed.email, parsed.password);
 
     res.status(200).json({
       success: true,
       message: "Login successful",
-      data: result,
+      data,
     });
-  } catch (err: any) {
+  } catch (error: any) {
+    // Handle Zod validation errors or service errors
+    const message =
+      error?.errors?.map((e: any) => e.message).join(", ") || error.message;
+
     res.status(400).json({
       success: false,
-      message: err.message || "Login failed",
+      message,
     });
   }
 };
