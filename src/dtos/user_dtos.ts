@@ -18,13 +18,15 @@ export const UpdateUserDto = RegisterDTO.partial();
 
 // Guide Request DTO
 export const GuideRequestDTO = z.object({
-  guideId: z.string().min(1, "Guide ID is required"),
-  tripDate: z.string().datetime("Invalid date format"),
+  guestName: z.string().min(3, "Name is required"),
+  guestEmail: z.string().email("Valid email is required"),
+  guestPhone: z.string().min(10, "Valid phone number is required"),
+  tripDate: z.string().min(1, "Booking date is required"),
   duration: z.number().min(1, "Duration must be at least 1 day"),
   location: z.string().min(3, "Location is required"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  budget: z.number().min(1, "Budget must be greater than 0"),
   numberOfPeople: z.number().min(1, "At least 1 person required"),
+  language: z.string().min(2, "Language preference is required"),
+  customMessage: z.string().min(10, "Message must be at least 10 characters"),
 });
 
 // Guide Request Status Update DTO

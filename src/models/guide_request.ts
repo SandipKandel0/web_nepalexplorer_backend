@@ -3,13 +3,16 @@ import mongoose, { Schema, Document, model } from "mongoose";
 // Interface for Guide Request
 export interface IGuideRequest extends Document {
   guestId: mongoose.Types.ObjectId;
-  guideId: mongoose.Types.ObjectId;
+  guideId?: mongoose.Types.ObjectId;
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string;
   tripDate: Date;
   duration: number; // in days
   location: string;
-  description: string;
-  budget: number;
   numberOfPeople: number;
+  language: string;
+  customMessage: string;
   status: "pending" | "approved" | "declined";
   createdAt: Date;
   updatedAt: Date;
@@ -19,13 +22,16 @@ export interface IGuideRequest extends Document {
 const GuideRequestSchema: Schema = new Schema<IGuideRequest>(
   {
     guestId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    guideId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    guideId: { type: Schema.Types.ObjectId, ref: "User", required: false },
+    guestName: { type: String, required: true },
+    guestEmail: { type: String, required: true },
+    guestPhone: { type: String, required: true },
     tripDate: { type: Date, required: true },
     duration: { type: Number, required: true },
     location: { type: String, required: true },
-    description: { type: String, required: true },
-    budget: { type: Number, required: true },
     numberOfPeople: { type: Number, required: true },
+    language: { type: String, required: true },
+    customMessage: { type: String, required: true },
     status: {
       type: String,
       enum: ["pending", "approved", "declined"],

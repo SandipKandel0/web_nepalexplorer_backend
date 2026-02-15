@@ -6,6 +6,7 @@ import { HttpError } from "./errors/http-error";
 import guideRoutes from "./routes/guide_route";
 import userRoutes from "./routes/user_route";
 import adminRoutes from "./routes/admin_route";
+import guideRequestRoutes from "./routes/guide_request_route";
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ connectDB();
 
 // Routes
 app.use("/api/guide", guideRoutes);
+app.use("/api/guide", guideRequestRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 
