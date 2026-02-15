@@ -1,44 +1,160 @@
 import UserModel from "../models/user";
-import bcrypt from "bcrypt";
+import { HttpError } from "../errors/http-error";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+
+interface RegisterUserInput {
+  fullName: string;
+  email: string;
+  password: string;
+  phone: string;
+  profileImage?: string;
+}
+
+interface LoginUserInput {
+  email: string;
+  password: string;
+}
 
 export class UserService {
-  async register(data: any) {
-    // Check if email already exists
-    const existing = await UserModel.findOne({ email: data.email });
-    if (existing) throw new Error("Email already exists");
-    const existingUsername = await UserModel.findOne({ username: data.username });
-    if (existingUsername) throw new Error("Username already exists");
+  async registerUser(input: RegisterUserInput) {
+    // Check if user already exists
+    const existingUser = await UserModel.findOne({ email: input.email });
+    if (existingUser) {
+      throw new HttpError(409, "User with this email already exists");
+    }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-
-    // Convert isGuide to role
-    const role = data.isGuide ? "guide" : "user";
-
-    // Save user
-    const user = await UserModel.create({ 
-      ...data, 
-      password: hashedPassword,
-      role,
+    // Create new user
+    const user = new UserModel({
+      fullName: input.fullName,
+      email: input.email,
+      password: input.password,
+      phone: input.phone,
+      profileImage: input.profileImage || null,
     });
+
+    await user.save();
+
+    // Create JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: "user" },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "7d" }
+    );
+
+    return {
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      profileImage: user.profileImage,
+      token,
+    };
+  }
+
+  async loginUser(input: LoginUserInput) {
+    const user = await UserModel.findOne({ email: input.email }).select("+password");
+    if (!user) {
+      throw new HttpError(401, "Invalid email or password");
+    }
+
+    const isPasswordValid = await user.comparePassword(input.password);
+    if (!isPasswordValid) {
+      throw new HttpError(401, "Invalid email or password");
+    }
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: "user" },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "7d" }
+    );
+
+    return {
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      profileImage: user.profileImage,
+      token,
+    };
+  }
+
+  async getUserById(id: string) {
+    const user = await UserModel.findById(id).populate("favourites");
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
     return user;
   }
 
-  async login(email: string, password: string) {
-    const user = await UserModel.findOne({ email });
-    if (!user) throw new Error("User not found");
+  async updateUser(id: string, data: Partial<RegisterUserInput>) {
+    const user = await UserModel.findByIdAndUpdate(id, data, {
+      new: true,
+      runValidators: true,
+    });
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) throw new Error("Invalid credentials");
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
 
-    // Return JWT with role included
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET!,
-      { expiresIn: "1d" }
-    );
-    return { user, token };
+    return user;
+  }
+
+  async addFavourite(userId: string, guideId: string) {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    if (!user.favourites.includes(guideId as any)) {
+      user.favourites.push(guideId as any);
+      await user.save();
+    }
+
+    return user.populate("favourites");
+  }
+
+  async removeFavourite(userId: string, guideId: string) {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    user.favourites = user.favourites.filter((id: mongoose.Types.ObjectId) => id.toString() !== guideId);
+    await user.save();
+
+    return user.populate("favourites");
+  }
+
+  async getFavourites(userId: string) {
+    const user = await UserModel.findById(userId).populate("favourites");
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+    return user.favourites;
+  }
+
+  // Admin methods
+  async register(userData: any) {
+    // Check if user already exists
+    const existingUser = await UserModel.findOne({ email: userData.email });
+    if (existingUser) {
+      throw new HttpError(409, "User with this email already exists");
+    }
+
+    // Create new user
+    const user = new UserModel({
+      fullName: userData.fullName,
+      username: userData.username,
+      email: userData.email,
+      phone: userData.phoneNumber || userData.phone,
+      password: userData.password,
+      role: userData.role || "user",
+      profileImage: userData.imageUrl || null,
+    });
+
+    await user.save();
+    return user;
   }
 
   async getAllUsers() {
@@ -46,47 +162,11 @@ export class UserService {
     return users;
   }
 
-  async getUserById(id: string) {
-    const user = await UserModel.findById(id).select("-password");
-    if (!user) throw new Error("User not found");
-    return user;
-  }
-
-  async updateUser(id: string, updateData: any) {
-    // Check if username already exists (if being updated)
-    if (updateData.username) {
-      const existing = await UserModel.findOne({
-        username: updateData.username,
-        _id: { $ne: id },
-      });
-      if (existing) throw new Error("Username already exists");
-    }
-
-    // Check if email already exists (if being updated)
-    if (updateData.email) {
-      const existing = await UserModel.findOne({
-        email: updateData.email,
-        _id: { $ne: id },
-      });
-      if (existing) throw new Error("Email already exists");
-    }
-
-    // If password is being updated, hash it
-    if (updateData.password) {
-      updateData.password = await bcrypt.hash(updateData.password, 10);
-    }
-
-    const user = await UserModel.findByIdAndUpdate(id, updateData, {
-      new: true,
-    }).select("-password");
-
-    if (!user) throw new Error("User not found");
-    return user;
-  }
-
   async deleteUser(id: string) {
     const user = await UserModel.findByIdAndDelete(id);
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
     return user;
   }
 }

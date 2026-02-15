@@ -1,38 +1,23 @@
-import { Router } from "express";
-import {
-  createGuideRequest,
-  getAllGuideRequests,
-  getMyGuideRequests,
-  getMyRequestedGuides,
-  getGuideRequest,
-  approveGuideRequest,
-  declineGuideRequest,
-  deleteGuideRequest,
-  getNotifications,
-  getUnreadCount,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
-  deleteNotification,
-} from "../controllers/guide_controller";
-import { authenticateToken } from "../middlewares/auth.middleware";
+import express from "express";
+import { GuideController } from "../controllers/guide_controller";
+import { uploads } from "../middlewares/upload.middleware";
 
-const router = Router();
+const router = express.Router();
+const guideController = new GuideController();
 
-// Guide Request Routes (protected)
-router.post("/requests", authenticateToken, createGuideRequest);
-router.get("/requests/all", authenticateToken, getAllGuideRequests);
-router.get("/requests/my-guide-requests", authenticateToken, getMyGuideRequests);
-router.get("/requests/my-requested-guides", authenticateToken, getMyRequestedGuides);
-router.get("/requests/:id", authenticateToken, getGuideRequest);
-router.put("/requests/:id/approve", authenticateToken, approveGuideRequest);
-router.put("/requests/:id/decline", authenticateToken, declineGuideRequest);
-router.delete("/requests/:id", authenticateToken, deleteGuideRequest);
+// Register guide
+router.post("/register", uploads.single("profileImage"), guideController.registerGuide);
 
-// Notification Routes (protected)
-router.get("/notifications", authenticateToken, getNotifications);
-router.get("/notifications/unread-count", authenticateToken, getUnreadCount);
-router.put("/notifications/:id/read", authenticateToken, markNotificationAsRead);
-router.put("/notifications/mark-all-read", authenticateToken, markAllNotificationsAsRead);
-router.delete("/notifications/:id", authenticateToken, deleteNotification);
+// Login guide
+router.post("/login", guideController.loginGuide);
+
+// Get all guides
+router.get("/", guideController.getAllGuides);
+
+// Get guide by ID
+router.get("/:id", guideController.getGuideById);
+
+// Update guide
+router.put("/:id", uploads.single("profileImage"), guideController.updateGuide);
 
 export default router;

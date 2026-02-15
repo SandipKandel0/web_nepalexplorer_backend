@@ -1,17 +1,25 @@
-import { Router } from "express";
-import { registerUser, loginUser, updateUserProfile } from "../controllers/user_controller";
-import { authenticateToken } from "../middlewares/auth.middleware";
+import express from "express";
+import { UserController } from "../controllers/user_controller";
 import { uploads } from "../middlewares/upload.middleware";
 
-const router = Router();
+const router = express.Router();
+const userController = new UserController();
 
-// Register endpoint
-router.post("/register", registerUser);
+// Register user
+router.post("/register", uploads.single("profileImage"), userController.registerUser);
 
-// Login endpoint
-router.post("/login", loginUser);
+// Login user
+router.post("/login", userController.loginUser);
 
-// Update user profile with optional image
-router.put("/:id", authenticateToken, uploads.single("image"), updateUserProfile);
+// Get user by ID
+router.get("/:id", userController.getUserById);
+
+// Update user
+router.put("/:id", uploads.single("profileImage"), userController.updateUser);
+
+// Favourite routes
+router.post("/favourite/add", userController.addFavourite);
+router.post("/favourite/remove", userController.removeFavourite);
+router.get("/:userId/favourites", userController.getFavourites);
 
 export default router;

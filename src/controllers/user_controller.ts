@@ -1,69 +1,152 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { UserService } from "../services/user_service";
-import { RegisterDTO, LoginDTO, UpdateUserDto } from "../dtos/user_dtos";
+import { HttpError } from "../errors/http-error";
 
-const userService = new UserService();
+export class UserController {
+  private userService = new UserService();
 
-export const registerUser = async (req: Request, res: Response) => {
-  try {
-    const parsed = RegisterDTO.parse(req.body); // only fullName, username, email, phoneNumber, password, role
-    const user = await userService.register(parsed);
-    res.status(201).json({ success: true, data: user });
-  } catch (error: any) {
-    return res.status(400).json({
-      success: false,
-      message: error.errors?.map((e: any) => e.message).join(", ") || error.message,
-    });
-  }
-};
+  registerUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { fullName, email, password, confirmPassword, phone } = req.body;
+      const profileImage = req.file?.filename || undefined;
 
-export const loginUser = async (req: Request, res: Response) => {
-  try {
-    // Validate request body using DTO
-    const parsed = LoginDTO.parse(req.body);
+      // Validation
+      if (!fullName || !email || !password || !phone) {
+        throw new HttpError(400, "Missing required fields");
+      }
 
-    // Call service to login user
-    const data = await userService.login(parsed.email, parsed.password);
+      if (password !== confirmPassword) {
+        throw new HttpError(400, "Passwords do not match");
+      }
 
-    res.status(200).json({
-      success: true,
-      message: "Login successful",
-      data,
-    });
-  } catch (error: any) {
-    // Handle Zod validation errors or service errors
-    const message =
-      error?.errors?.map((e: any) => e.message).join(", ") || error.message;
+      if (password.length < 6) {
+        throw new HttpError(400, "Password must be at least 6 characters");
+      }
 
-    res.status(400).json({
-      success: false,
-      message,
-    });
-  }
-};
+      const user = await this.userService.registerUser({
+        fullName,
+        email,
+        password,
+        phone,
+        profileImage,
+      });
 
-// Update user profile with optional image
-export const updateUserProfile = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const updateData = UpdateUserDto.parse(req.body);
-
-    // If file is uploaded, add imageUrl
-    if (req.file) {
-      (updateData as any).imageUrl = `/uploads/${req.file.filename}`;
+      res.status(201).json({
+        success: true,
+        message: "User registered successfully",
+        data: user,
+      });
+    } catch (error) {
+      next(error);
     }
+  };
 
-    const user = await userService.updateUser(id, updateData);
+  loginUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email, password } = req.body;
 
-    res.status(200).json({
-      success: true,
-      message: "Profile updated successfully",
-      data: user,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to update profile",
-    });
-  }
-};
+      if (!email || !password) {
+        throw new HttpError(400, "Email and password are required");
+      }
+
+      const user = await this.userService.loginUser({ email, password });
+
+      res.json({
+        success: true,
+        message: "Login successful",
+        data: user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getUserById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const user = await this.userService.getUserById(id);
+
+      res.json({
+        success: true,
+        data: user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const profileImage = req.file?.filename || undefined;
+
+      const user = await this.userService.updateUser(id, {
+        ...req.body,
+        profileImage,
+      });
+
+      res.json({
+        success: true,
+        message: "User updated successfully",
+        data: user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  addFavourite = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { userId, guideId } = req.body;
+
+      if (!userId || !guideId) {
+        throw new HttpError(400, "User ID and Guide ID are required");
+      }
+
+      const user = await this.userService.addFavourite(userId, guideId);
+
+      res.json({
+        success: true,
+        message: "Guide added to favourites",
+        data: user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  removeFavourite = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { userId, guideId } = req.body;
+
+      if (!userId || !guideId) {
+        throw new HttpError(400, "User ID and Guide ID are required");
+      }
+
+      const user = await this.userService.removeFavourite(userId, guideId);
+
+      res.json({
+        success: true,
+        message: "Guide removed from favourites",
+        data: user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getFavourites = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req.params;
+
+      const favourites = await this.userService.getFavourites(userId);
+
+      res.json({
+        success: true,
+        data: favourites,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}

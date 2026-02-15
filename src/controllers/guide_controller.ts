@@ -1,266 +1,115 @@
-import { Request, Response } from "express";
-import { GuideRequestService, NotificationService } from "../services/guide_service";
-import { GuideRequestDTO, GuideRequestStatusDTO } from "../dtos/user_dtos";
+import { Request, Response, NextFunction } from "express";
+import { GuideService } from "../services/guide_service";
+import { HttpError } from "../errors/http-error";
 
-const guideRequestService = new GuideRequestService();
-const notificationService = new NotificationService();
+export class GuideController {
+  private guideService = new GuideService();
 
-// Create guide request
-export const createGuideRequest = async (req: Request, res: Response) => {
-  try {
-    const validated = GuideRequestDTO.parse(req.body);
-    const guestId = req.userId; // From auth middleware
+  registerGuide = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { fullName, email, password, phone, language, experience, city, bio } = req.body;
+      const profileImage = req.file?.filename || undefined;
 
-    const data = {
-      guestId,
-      guideId: validated.guideId,
-      tripDate: validated.tripDate,
-      duration: validated.duration,
-      location: validated.location,
-      description: validated.description,
-      budget: validated.budget,
-      numberOfPeople: validated.numberOfPeople,
-      guestName: req.body.guestName, // For notification message
-    };
+      // Validation
+      if (!fullName || !email || !password || !phone || !language || !experience || !city) {
+        throw new HttpError(400, "Missing required fields");
+      }
 
-    const guideRequest = await guideRequestService.createGuideRequest(data);
+      if (password.length < 6) {
+        throw new HttpError(400, "Password must be at least 6 characters");
+      }
 
-    res.status(201).json({
-      success: true,
-      message: "Guide request created successfully",
-      data: guideRequest,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message:
-        error.errors?.map((e: any) => e.message).join(", ") ||
-        error.message ||
-        "Failed to create guide request",
-    });
-  }
-};
+      const guide = await this.guideService.registerGuide({
+        fullName,
+        email,
+        password,
+        phone,
+        language,
+        experience,
+        city,
+        bio: bio || "",
+        profileImage,
+      });
 
-// Get all guide requests (admin)
-export const getAllGuideRequests = async (req: Request, res: Response) => {
-  try {
-    const requests = await guideRequestService.getAllGuideRequests();
-    res.status(200).json({
-      success: true,
-      message: "Guide requests retrieved successfully",
-      data: requests,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to retrieve guide requests",
-    });
-  }
-};
+      res.status(201).json({
+        success: true,
+        message: "Guide registered successfully",
+        data: guide,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
-// Get guide requests for logged-in guide
-export const getMyGuideRequests = async (req: Request, res: Response) => {
-  try {
-    const guideId = req.userId;
-    const requests = await guideRequestService.getGuideRequestsForGuide(
-      guideId!
-    );
-    res.status(200).json({
-      success: true,
-      message: "Guide requests retrieved successfully",
-      data: requests,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to retrieve guide requests",
-    });
-  }
-};
+  loginGuide = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email, password } = req.body;
 
-// Get guide requests by guest
-export const getMyRequestedGuides = async (req: Request, res: Response) => {
-  try {
-    const guestId = req.userId;
-    const requests = await guideRequestService.getGuideRequestsByGuest(
-      guestId!
-    );
-    res.status(200).json({
-      success: true,
-      message: "Guide requests retrieved successfully",
-      data: requests,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to retrieve guide requests",
-    });
-  }
-};
+      if (!email || !password) {
+        throw new HttpError(400, "Email and password are required");
+      }
 
-// Get single guide request
-export const getGuideRequest = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const request = await guideRequestService.getGuideRequestById(id);
-    res.status(200).json({
-      success: true,
-      message: "Guide request retrieved successfully",
-      data: request,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to retrieve guide request",
-    });
-  }
-};
+      const guide = await this.guideService.loginGuide({ email, password });
 
-// Approve guide request (guide only)
-export const approveGuideRequest = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const request = await guideRequestService.approveGuideRequest(id);
-    res.status(200).json({
-      success: true,
-      message: "Guide request approved successfully",
-      data: request,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to approve guide request",
-    });
-  }
-};
+      res.json({
+        success: true,
+        message: "Login successful",
+        data: guide,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
-// Decline guide request (guide only)
-export const declineGuideRequest = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const request = await guideRequestService.declineGuideRequest(id);
-    res.status(200).json({
-      success: true,
-      message: "Guide request declined successfully",
-      data: request,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to decline guide request",
-    });
-  }
-};
+  getGuideById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const guide = await this.guideService.getGuideById(id);
 
-// Delete guide request
-export const deleteGuideRequest = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const request = await guideRequestService.deleteGuideRequest(id);
-    res.status(200).json({
-      success: true,
-      message: "Guide request deleted successfully",
-      data: request,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to delete guide request",
-    });
-  }
-};
+      res.json({
+        success: true,
+        data: guide,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
-// Get user notifications
-export const getNotifications = async (req: Request, res: Response) => {
-  try {
-    const userId = req.userId;
-    const notifications = await notificationService.getUserNotifications(
-      userId!
-    );
-    res.status(200).json({
-      success: true,
-      message: "Notifications retrieved successfully",
-      data: notifications,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to retrieve notifications",
-    });
-  }
-};
+  updateGuide = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const profileImage = req.file?.filename || undefined;
 
-// Get unread notifications count
-export const getUnreadCount = async (req: Request, res: Response) => {
-  try {
-    const userId = req.userId;
-    const count = await notificationService.getUnreadCount(userId!);
-    res.status(200).json({
-      success: true,
-      message: "Unread count retrieved successfully",
-      data: { count },
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to retrieve unread count",
-    });
-  }
-};
+      const guide = await this.guideService.updateGuide(id, {
+        ...req.body,
+        profileImage,
+      });
 
-// Mark notification as read
-export const markNotificationAsRead = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const notification = await notificationService.markAsRead(id);
-    res.status(200).json({
-      success: true,
-      message: "Notification marked as read",
-      data: notification,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to mark notification as read",
-    });
-  }
-};
+      res.json({
+        success: true,
+        message: "Guide updated successfully",
+        data: guide,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
-// Mark all notifications as read
-export const markAllNotificationsAsRead = async (
-  req: Request,
-  res: Response
-) => {
-  try {
-    const userId = req.userId;
-    const result = await notificationService.markAllAsRead(userId!);
-    res.status(200).json({
-      success: true,
-      message: "All notifications marked as read",
-      data: result,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to mark all notifications as read",
-    });
-  }
-};
+  getAllGuides = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { city, language } = req.query;
 
-// Delete notification
-export const deleteNotification = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const notification = await notificationService.deleteNotification(id);
-    res.status(200).json({
-      success: true,
-      message: "Notification deleted successfully",
-      data: notification,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to delete notification",
-    });
-  }
-};
+      const guides = await this.guideService.getAllGuides({
+        city: city as string,
+        language: language as string,
+      });
+
+      res.json({
+        success: true,
+        data: guides,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
