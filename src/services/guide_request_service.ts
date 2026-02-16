@@ -53,6 +53,20 @@ export class GuideRequestService {
     }
   }
 
+  async getRequestsByGuideId(guideId: string) {
+    try {
+      // For now, return all requests since guide assignment isn't implemented yet
+      // Later: filter by guideId when you implement guide selection
+      const requests = await GuideRequestModel.find()
+        .sort({ createdAt: -1 });
+
+      return requests;
+    } catch (error: any) {
+      console.error("Error in getRequestsByGuideId:", error);
+      throw new HttpError(500, error.message || "Failed to fetch guide requests");
+    }
+  }
+
   async getAllRequests() {
     try {
       const requests = await GuideRequestModel.find()

@@ -68,6 +68,32 @@ export class GuideRequestController {
     }
   };
 
+  getMyRequestedGuides = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      console.log("=== getMyRequestedGuides called ===");
+      console.log("User from token:", (req as any).user);
+      
+      const guideId = (req as any).user?.id;
+
+      if (!guideId) {
+        console.log("No guideId found in request");
+        throw new HttpError(401, "Unauthorized");
+      }
+
+      console.log("Fetching requests for guide:", guideId);
+      const requests = await this.guideRequestService.getRequestsByGuideId(guideId);
+      console.log("Found requests:", requests.length);
+
+      res.json({
+        success: true,
+        data: requests,
+      });
+    } catch (error) {
+      console.error("Error in getMyRequestedGuides:", error);
+      next(error);
+    }
+  };
+
   getAllRequests = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const requests = await this.guideRequestService.getAllRequests();
@@ -105,6 +131,38 @@ export class GuideRequestController {
       res.json({
         success: true,
         message: `Request ${status} successfully`,
+        data: request,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  approveRequest = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+
+      const request = await this.guideRequestService.updateRequestStatus(id, "approved");
+
+      res.json({
+        success: true,
+        message: "Request approved successfully",
+        data: request,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  declineRequest = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+
+      const request = await this.guideRequestService.updateRequestStatus(id, "declined");
+
+      res.json({
+        success: true,
+        message: "Request declined successfully",
         data: request,
       });
     } catch (error) {

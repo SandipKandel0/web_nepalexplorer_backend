@@ -48,18 +48,22 @@ app.use((req: Request, res: Response) => {
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error(err);
+  console.error("=== Error Handler Middleware ===");
+  console.error("Error:", err);
+  console.error("Error stack:", err.stack);
 
   if (err instanceof HttpError) {
     return res.status(err.statusCode).json({
       success: false,
       error: err.message,
+      message: err.message,
     });
   }
 
   res.status(500).json({
     success: false,
-    error: "Internal server error",
+    error: err.message || "Internal server error",
+    message: err.message || "Internal server error",
   });
 });
 

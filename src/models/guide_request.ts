@@ -22,7 +22,7 @@ export interface IGuideRequest extends Document {
 const GuideRequestSchema: Schema = new Schema<IGuideRequest>(
   {
     guestId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    guideId: { type: Schema.Types.ObjectId, ref: "User", required: false },
+    guideId: { type: Schema.Types.ObjectId, ref: "Guide", required: false },
     guestName: { type: String, required: true },
     guestEmail: { type: String, required: true },
     guestPhone: { type: String, required: true },
@@ -31,7 +31,7 @@ const GuideRequestSchema: Schema = new Schema<IGuideRequest>(
     location: { type: String, required: true },
     numberOfPeople: { type: Number, required: true },
     language: { type: String, required: true },
-    customMessage: { type: String, required: true },
+    customMessage: { type: String, required: false, default: "" },
     status: {
       type: String,
       enum: ["pending", "approved", "declined"],

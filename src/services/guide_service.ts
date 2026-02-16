@@ -60,6 +60,8 @@ export class GuideService {
       city: guide.city,
       bio: guide.bio,
       profileImage: guide.profileImage,
+      rating: guide.rating,
+      createdAt: guide.createdAt,
       token,
     };
   }
@@ -91,6 +93,8 @@ export class GuideService {
       city: guide.city,
       bio: guide.bio,
       profileImage: guide.profileImage,
+      rating: guide.rating,
+      createdAt: guide.createdAt,
       token,
     };
   }
