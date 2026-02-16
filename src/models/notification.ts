@@ -2,9 +2,10 @@ import mongoose, { Schema, Document, model } from "mongoose";
 
 // Interface for Notification
 export interface INotification extends Document {
-  userId: mongoose.Types.ObjectId;
-  guideRequestId: mongoose.Types.ObjectId;
-  type: "approval" | "decline" | "new_request";
+  userId?: mongoose.Types.ObjectId;
+  guideId?: mongoose.Types.ObjectId;
+  guideRequestId?: mongoose.Types.ObjectId;
+  type: "approval" | "decline" | "new_request" | "new_booking" | "booking_update" | "system";
   message: string;
   read: boolean;
   createdAt: Date;
@@ -14,15 +15,16 @@ export interface INotification extends Document {
 // Mongoose schema
 const NotificationSchema: Schema = new Schema<INotification>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: false },
+    guideId: { type: Schema.Types.ObjectId, ref: "Guide", required: false },
     guideRequestId: {
       type: Schema.Types.ObjectId,
       ref: "GuideRequest",
-      required: true,
+      required: false,
     },
     type: {
       type: String,
-      enum: ["approval", "decline", "new_request"],
+      enum: ["approval", "decline", "new_request", "new_booking", "booking_update", "system"],
       required: true,
     },
     message: { type: String, required: true },

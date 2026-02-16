@@ -8,6 +8,7 @@ declare global {
   namespace Express {
     interface Request {
       userId?: string;
+      guideId?: string;
       userRole?: string;
       user?: any;
     }
@@ -103,6 +104,45 @@ export const authenticateUser = (req: Request, res: Response, next: NextFunction
     });
   } catch (error: any) {
     console.error("Error in authenticateUser middleware:", error);
+    res.status(error.statusCode || 401).json({
+      success: false,
+      message: error.message || "Authentication failed",
+    });
+  }
+};
+
+export const authenticateGuide = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    console.log("=== authenticateGuide middleware ===");
+    console.log("Auth header:", authHeader?.substring(0, 50) + "...");
+    console.log("Token extracted:", token ? "Yes" : "No");
+
+    if (!token) {
+      console.log("No token provided");
+      return res.status(401).json({
+        success: false,
+        message: "No token provided",
+      });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err: any, guide: any) => {
+      if (err) {
+        console.log("JWT verification failed:", err.message);
+        return res.status(401).json({
+          success: false,
+          message: "Invalid or expired token",
+        });
+      }
+      console.log("JWT verified successfully, guide:", guide);
+      (req as any).guideId = guide.id;
+      (req as any).guide = guide;
+      next();
+    });
+  } catch (error: any) {
+    console.error("Error in authenticateGuide middleware:", error);
     res.status(error.statusCode || 401).json({
       success: false,
       message: error.message || "Authentication failed",

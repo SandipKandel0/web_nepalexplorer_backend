@@ -1,6 +1,7 @@
 // Service for handling guide request operations
 import GuideRequestModel, { IGuideRequest } from "../models/guide_request";
 import { HttpError } from "../errors/http-error";
+import { NotificationController } from "../controllers/notification_controller";
 
 interface CreateGuideRequestInput {
   guestId: string;
@@ -16,8 +17,13 @@ interface CreateGuideRequestInput {
 }
 
 export class GuideRequestService {
+  private notificationController = new NotificationController();
+
   async createGuideRequest(input: CreateGuideRequestInput) {
     try {
+      console.log("=== Creating guide request ===");
+      console.log("Input:", input);
+      
       const guideRequest = new GuideRequestModel({
         guestId: input.guestId,
         guestName: input.guestName,
@@ -33,9 +39,22 @@ export class GuideRequestService {
       });
 
       await guideRequest.save();
+      console.log("Guide request saved successfully:", guideRequest._id);
+
+      // Create notification for all guides about the new request
+      console.log("Creating notification for all guides...");
+      const notificationData = {
+        type: "new_request" as const,
+        message: `New booking request from ${input.guestName} for ${input.location}`,
+      };
+      console.log("Notification data:", notificationData);
+      
+      const notification = await this.notificationController.createNotification(notificationData);
+      console.log("Notification created successfully:", notification);
 
       return guideRequest;
     } catch (error: any) {
+      console.error("Error in createGuideRequest:", error);
       throw new HttpError(500, error.message || "Failed to create guide request");
     }
   }
@@ -99,6 +118,9 @@ export class GuideRequestService {
 
   async updateRequestStatus(id: string, status: "approved" | "declined") {
     try {
+      console.log("=== Updating request status ===");
+      console.log("Request ID:", id, "New status:", status);
+      
       const request = await GuideRequestModel.findByIdAndUpdate(
         id,
         { status },
@@ -111,8 +133,32 @@ export class GuideRequestService {
         throw new HttpError(404, "Guide request not found");
       }
 
+      console.log("Request updated successfully");
+
+      // Create notification for the guest about the status update
+      const statusMessage = status === "approved" 
+        ? `Your booking request for ${request.location} has been approved!`
+        : `Your booking request for ${request.location} has been declined.`;
+
+      // Extract userId from populated guestId object
+      const guestUserId = typeof request.guestId === "object" && request.guestId !== null 
+        ? (request.guestId as any)._id?.toString() || request.guestId.toString()
+        : request.guestId?.toString();
+
+      console.log("Creating status notification:", { userId: guestUserId, status, message: statusMessage });
+      
+      const notification = await this.notificationController.createNotification({
+        userId: guestUserId,
+        type: status === "approved" ? "approval" : "decline",
+        message: statusMessage,
+        guideRequestId: id,
+      });
+      
+      console.log("Status notification created successfully:", notification);
+
       return request;
     } catch (error: any) {
+      console.error("Error in updateRequestStatus:", error);
       if (error instanceof HttpError) throw error;
       throw new HttpError(500, error.message || "Failed to update guide request");
     }
