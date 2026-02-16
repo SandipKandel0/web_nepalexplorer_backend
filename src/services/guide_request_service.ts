@@ -141,9 +141,10 @@ export class GuideRequestService {
         : `Your booking request for ${request.location} has been declined.`;
 
       // Extract userId from populated guestId object
-      const guestUserId = typeof request.guestId === "object" && request.guestId !== null 
-        ? (request.guestId as any)._id?.toString() || request.guestId.toString()
-        : request.guestId?.toString();
+      let guestUserId: any = request.guestId;
+      if (typeof request.guestId === "object" && request.guestId !== null) {
+        guestUserId = (request.guestId as any)._id || request.guestId;
+      }
 
       console.log("Creating status notification:", { userId: guestUserId, status, message: statusMessage });
       
