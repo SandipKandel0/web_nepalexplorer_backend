@@ -7,6 +7,7 @@ import guideRoutes from "./routes/guide_route";
 import userRoutes from "./routes/user_route";
 import adminRoutes from "./routes/admin_route";
 import guideRequestRoutes from "./routes/guide_request_route";
+import UserModel from "./models/user";
 
 dotenv.config();
 
@@ -26,6 +27,34 @@ app.use("/uploads", express.static("uploads"));
 
 // Connect to Database
 connectDB();
+
+const ensureDefaultAdmin = async () => {
+  const defaultAdminEmail = process.env.DEFAULT_ADMIN_EMAIL || "admin@webnepal.com";
+  const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || "admin12345";
+  const defaultAdminUsername = process.env.DEFAULT_ADMIN_USERNAME || "admin";
+
+  const existingAdmin = await UserModel.findOne({
+    $or: [{ role: "admin" }, { email: defaultAdminEmail }],
+  });
+  if (existingAdmin) {
+    return;
+  }
+
+  await UserModel.create({
+    fullName: "Default Admin",
+    username: defaultAdminUsername,
+    email: defaultAdminEmail,
+    phone: "9800000000",
+    password: defaultAdminPassword,
+    role: "admin",
+  });
+
+  console.log(`Default admin created: ${defaultAdminEmail}`);
+};
+
+ensureDefaultAdmin().catch((error) => {
+  console.error("Failed to ensure default admin:", error);
+});
 
 // Routes
 app.use("/api/guide", guideRoutes);

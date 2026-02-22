@@ -47,6 +47,7 @@ export class UserService {
       fullName: user.fullName,
       email: user.email,
       phone: user.phone,
+      role: user.role,
       profileImage: user.profileImage,
       token,
     };
@@ -74,6 +75,7 @@ export class UserService {
       fullName: user.fullName,
       email: user.email,
       phone: user.phone,
+      role: user.role,
       profileImage: user.profileImage,
       token,
     };

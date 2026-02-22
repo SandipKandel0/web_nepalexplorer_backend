@@ -6,6 +6,16 @@ import {
   updateUser,
   deleteUser,
 } from "../controllers/admin_controller";
+import {
+  createDestination,
+  getAllDestinations,
+  deleteDestination,
+  updateDestination,
+} from "../controllers/destination_controller";
+import {
+  deleteGuideForAdmin,
+  getAllGuidesForAdmin,
+} from "../controllers/admin_guide_controller";
 import { authorizeAdmin } from "../middlewares/auth.middleware";
 import { uploads } from "../middlewares/upload.middleware";
 
@@ -28,5 +38,23 @@ router.put("/users/:id", uploads.single("image"), updateUser);
 
 // DELETE /api/admin/users/:id - Delete user
 router.delete("/users/:id", deleteUser);
+
+// POST /api/admin/destinations - Upload destination with image
+router.post("/destinations", uploads.single("image"), createDestination);
+
+// GET /api/admin/destinations - List uploaded destinations
+router.get("/destinations", getAllDestinations);
+
+// DELETE /api/admin/destinations/:id - Delete destination
+router.delete("/destinations/:id", deleteDestination);
+
+// PUT /api/admin/destinations/:id - Update destination with optional image
+router.put("/destinations/:id", uploads.single("image"), updateDestination);
+
+// GET /api/admin/guides - List all guides
+router.get("/guides", getAllGuidesForAdmin);
+
+// DELETE /api/admin/guides/:id - Delete guide
+router.delete("/guides/:id", deleteGuideForAdmin);
 
 export default router;
