@@ -37,7 +37,7 @@ export class UserService {
 
     // Create JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: "user" },
+      { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "7d" }
     );
@@ -65,7 +65,7 @@ export class UserService {
     }
 
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: "user" },
+      { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "7d" }
     );

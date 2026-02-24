@@ -7,6 +7,7 @@ import guideRoutes from "./routes/guide_route";
 import userRoutes from "./routes/user_route";
 import adminRoutes from "./routes/admin_route";
 import guideRequestRoutes from "./routes/guide_request_route";
+import destinationRoutes from "./routes/destination_route";
 import UserModel from "./models/user";
 
 dotenv.config();
@@ -33,9 +34,17 @@ const ensureDefaultAdmin = async () => {
   const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || "admin12345";
   const defaultAdminUsername = process.env.DEFAULT_ADMIN_USERNAME || "admin";
 
-  const existingAdmin = await UserModel.findOne({
-    $or: [{ role: "admin" }, { email: defaultAdminEmail }],
-  });
+  const existingByEmail = await UserModel.findOne({ email: defaultAdminEmail });
+  if (existingByEmail) {
+    existingByEmail.role = "admin";
+    existingByEmail.username = existingByEmail.username || defaultAdminUsername;
+    existingByEmail.password = defaultAdminPassword;
+    await existingByEmail.save();
+    console.log(`Default admin ensured: ${defaultAdminEmail}`);
+    return;
+  }
+
+  const existingAdmin = await UserModel.findOne({ role: "admin" });
   if (existingAdmin) {
     return;
   }
@@ -61,6 +70,7 @@ app.use("/api/guide", guideRoutes);
 app.use("/api/guide", guideRequestRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/destinations", destinationRoutes);
 
 // Health check
 app.get("/api/health", (req: Request, res: Response) => {
