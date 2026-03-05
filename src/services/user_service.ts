@@ -2,6 +2,7 @@ import UserModel from "../models/user";
 import { HttpError } from "../errors/http-error";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { sendResetPasswordEmail } from "../utils";
 
 interface RegisterUserInput {
   fullName: string;
@@ -14,6 +15,13 @@ interface RegisterUserInput {
 interface LoginUserInput {
   email: string;
   password: string;
+}
+
+interface ResetTokenPayload {
+  id: string;
+  email: string;
+  role: string;
+  purpose: "password-reset";
 }
 
 export class UserService {
@@ -79,6 +87,59 @@ export class UserService {
       profileImage: user.profileImage,
       token,
     };
+  }
+
+  async forgotPassword(email: string) {
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return;
+    }
+
+    const token = jwt.sign(
+      {
+        id: String(user._id),
+        email: user.email,
+        role: user.role,
+        purpose: "password-reset",
+      } as ResetTokenPayload,
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "15m" }
+    );
+
+    const frontendBaseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const resetLink = `${frontendBaseUrl}/reset-password?token=${encodeURIComponent(token)}&role=user`;
+
+    await sendResetPasswordEmail({
+      to: user.email,
+      name: user.fullName,
+      resetLink,
+    });
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    let decoded: ResetTokenPayload;
+
+    try {
+      decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "your-secret-key"
+      ) as ResetTokenPayload;
+    } catch (error) {
+      throw new HttpError(400, "Invalid or expired reset token");
+    }
+
+    if (decoded.purpose !== "password-reset") {
+      throw new HttpError(400, "Invalid reset token");
+    }
+
+    const user = await UserModel.findById(decoded.id).select("+password");
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    user.password = newPassword;
+    await user.save();
   }
 
   async getUserById(id: string) {

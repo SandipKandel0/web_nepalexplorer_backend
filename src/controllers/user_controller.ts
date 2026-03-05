@@ -61,6 +61,56 @@ export class UserController {
     }
   };
 
+  forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email } = req.body as { email?: string };
+
+      if (!email) {
+        throw new HttpError(400, "Email is required");
+      }
+
+      await this.userService.forgotPassword(email);
+
+      res.json({
+        success: true,
+        message: "If an account exists, a reset link has been sent to your email",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token, newPassword, confirmPassword } = req.body as {
+        token?: string;
+        newPassword?: string;
+        confirmPassword?: string;
+      };
+
+      if (!token || !newPassword || !confirmPassword) {
+        throw new HttpError(400, "Token, new password and confirm password are required");
+      }
+
+      if (newPassword !== confirmPassword) {
+        throw new HttpError(400, "Passwords do not match");
+      }
+
+      if (newPassword.length < 6) {
+        throw new HttpError(400, "Password must be at least 6 characters");
+      }
+
+      await this.userService.resetPassword(token, newPassword);
+
+      res.json({
+        success: true,
+        message: "Password reset successful",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getUserById = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;

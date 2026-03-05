@@ -14,6 +14,10 @@ router.post("/register", uploads.single("profileImage"), userController.register
 // Login user
 router.post("/login", userController.loginUser);
 
+// Forgot/reset password
+router.post("/forgot-password", userController.forgotPassword);
+router.post("/reset-password", userController.resetPassword);
+
 // Notification routes (protected)
 router.get("/notifications", authenticateUser, notificationController.getUserNotifications);
 router.put("/notifications/:id/read", authenticateUser, notificationController.markAsRead);
