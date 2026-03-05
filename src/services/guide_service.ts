@@ -1,6 +1,6 @@
-// filepath: c:\Users\ACER\OneDrive\Desktop\main project web\backendwebnepal\src\services\guide_service.ts
 import { GuideModel } from "../models/guide";
 import { HttpError } from "../errors/http-error";
+import { sendResetPasswordEmail } from "../utils";
 import jwt from "jsonwebtoken";
 
 interface RegisterGuideInput {
@@ -18,6 +18,13 @@ interface RegisterGuideInput {
 interface LoginGuideInput {
   email: string;
   password: string;
+}
+
+interface ResetTokenPayload {
+  id: string;
+  email: string;
+  role: string;
+  purpose: "password-reset";
 }
 
 export class GuideService {
@@ -97,6 +104,59 @@ export class GuideService {
       createdAt: guide.createdAt,
       token,
     };
+  }
+
+  async forgotPassword(email: string) {
+    const guide = await GuideModel.findOne({ email });
+
+    if (!guide) {
+      return;
+    }
+
+    const token = jwt.sign(
+      {
+        id: String(guide._id),
+        email: guide.email,
+        role: "guide",
+        purpose: "password-reset",
+      } as ResetTokenPayload,
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "15m" }
+    );
+
+    const frontendBaseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const resetLink = `${frontendBaseUrl}/reset-password?token=${encodeURIComponent(token)}&role=guide`;
+
+    await sendResetPasswordEmail({
+      to: guide.email,
+      name: guide.fullName,
+      resetLink,
+    });
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    let decoded: ResetTokenPayload;
+
+    try {
+      decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "your-secret-key"
+      ) as ResetTokenPayload;
+    } catch (error) {
+      throw new HttpError(400, "Invalid or expired reset token");
+    }
+
+    if (decoded.purpose !== "password-reset") {
+      throw new HttpError(400, "Invalid reset token");
+    }
+
+    const guide = await GuideModel.findById(decoded.id).select("+password");
+    if (!guide) {
+      throw new HttpError(404, "Guide not found");
+    }
+
+    guide.password = newPassword;
+    await guide.save();
   }
 
   async getGuideById(id: string) {

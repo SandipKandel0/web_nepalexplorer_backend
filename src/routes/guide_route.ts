@@ -14,6 +14,10 @@ router.post("/register", uploads.single("profileImage"), guideController.registe
 // Login guide
 router.post("/login", guideController.loginGuide);
 
+// Forgot/reset password
+router.post("/forgot-password", guideController.forgotPassword);
+router.post("/reset-password", guideController.resetPassword);
+
 // Notification routes (protected) - MUST be before /:id route
 router.get("/notifications", authenticateGuide, notificationController.getGuideNotifications);
 router.put("/notifications/:id/read", authenticateGuide, notificationController.markAsRead);
