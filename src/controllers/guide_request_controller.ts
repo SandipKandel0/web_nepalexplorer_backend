@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { GuideRequestService } from "../services/guide_request_service";
 import { HttpError } from "../errors/http-error";
 
+const isTestEnv = process.env.NODE_ENV === "test" || !!process.env.JEST_WORKER_ID;
+
 export class GuideRequestController {
   private guideRequestService = new GuideRequestService();
 
@@ -70,26 +72,36 @@ export class GuideRequestController {
 
   getMyRequestedGuides = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      console.log("=== getMyRequestedGuides called ===");
-      console.log("User from token:", (req as any).user);
+      if (!isTestEnv) {
+        console.log("=== getMyRequestedGuides called ===");
+        console.log("User from token:", (req as any).user);
+      }
       
       const guideId = (req as any).user?.id;
 
       if (!guideId) {
-        console.log("No guideId found in request");
+        if (!isTestEnv) {
+          console.log("No guideId found in request");
+        }
         throw new HttpError(401, "Unauthorized");
       }
 
-      console.log("Fetching requests for guide:", guideId);
+      if (!isTestEnv) {
+        console.log("Fetching requests for guide:", guideId);
+      }
       const requests = await this.guideRequestService.getRequestsByGuideId(guideId);
-      console.log("Found requests:", requests.length);
+      if (!isTestEnv) {
+        console.log("Found requests:", requests.length);
+      }
 
       res.json({
         success: true,
         data: requests,
       });
     } catch (error) {
-      console.error("Error in getMyRequestedGuides:", error);
+      if (!isTestEnv) {
+        console.error("Error in getMyRequestedGuides:", error);
+      }
       next(error);
     }
   };

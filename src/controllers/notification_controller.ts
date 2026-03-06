@@ -2,22 +2,32 @@ import { Request, Response, NextFunction } from "express";
 import NotificationModel from "../models/notification";
 import { HttpError } from "../errors/http-error";
 
+const isTestEnv = process.env.NODE_ENV === "test" || !!process.env.JEST_WORKER_ID;
+
 export class NotificationController {
   // Get notifications for a guide
   getGuideNotifications = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      console.log("=== getGuideNotifications called ===");
-      console.log("Request headers:", req.headers.authorization?.substring(0, 50));
+      if (!isTestEnv) {
+        console.log("=== getGuideNotifications called ===");
+        console.log("Request headers:", req.headers.authorization?.substring(0, 50));
+      }
       
       const guideId = (req as any).guideId;
-      console.log("Extracted guideId from request:", guideId);
+      if (!isTestEnv) {
+        console.log("Extracted guideId from request:", guideId);
+      }
       
       if (!guideId) {
-        console.log("No guideId found - authentication may have failed");
+        if (!isTestEnv) {
+          console.log("No guideId found - authentication may have failed");
+        }
         throw new HttpError(401, "Guide authentication required");
       }
 
-      console.log("Fetching notifications for guide:", guideId);
+      if (!isTestEnv) {
+        console.log("Fetching notifications for guide:", guideId);
+      }
 
       // Fetch notifications for this guide AND system notifications (where guideId is not set for new_request types)
       const notifications = await NotificationModel.find({
@@ -30,17 +40,21 @@ export class NotificationController {
         .sort({ createdAt: -1 })
         .limit(50);
 
-      console.log(`Found ${notifications.length} notifications for guide`);
+      if (!isTestEnv) {
+        console.log(`Found ${notifications.length} notifications for guide`);
+      }
 
       return res.status(200).json({
         success: true,
         data: notifications,
       });
     } catch (error: any) {
-      console.error("=== Error in getGuideNotifications ===");
-      console.error("Error name:", error.name);
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+      if (!isTestEnv) {
+        console.error("=== Error in getGuideNotifications ===");
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
       
       next(error);
     }
@@ -55,20 +69,26 @@ export class NotificationController {
         throw new HttpError(401, "User authentication required");
       }
 
-      console.log("Fetching notifications for user:", userId);
+      if (!isTestEnv) {
+        console.log("Fetching notifications for user:", userId);
+      }
 
       const notifications = await NotificationModel.find({ userId })
         .sort({ createdAt: -1 })
         .limit(50);
 
-      console.log(`Found ${notifications.length} notifications for user`);
+      if (!isTestEnv) {
+        console.log(`Found ${notifications.length} notifications for user`);
+      }
 
       return res.status(200).json({
         success: true,
         data: notifications,
       });
     } catch (error: any) {
-      console.error("Error fetching user notifications:", error);
+      if (!isTestEnv) {
+        console.error("Error fetching user notifications:", error);
+      }
       next(error);
     }
   };
@@ -80,7 +100,9 @@ export class NotificationController {
       const guideId = (req as any).guideId;
       const userId = (req as any).userId;
 
-      console.log("Marking notification as read:", id);
+      if (!isTestEnv) {
+        console.log("Marking notification as read:", id);
+      }
 
       const notification = await NotificationModel.findById(id);
 
@@ -107,7 +129,9 @@ export class NotificationController {
         message: "Notification marked as read",
       });
     } catch (error: any) {
-      console.error("Error marking notification as read:", error);
+      if (!isTestEnv) {
+        console.error("Error marking notification as read:", error);
+      }
       next(error);
     }
   };
@@ -119,7 +143,9 @@ export class NotificationController {
       const guideId = (req as any).guideId;
       const userId = (req as any).userId;
 
-      console.log("Deleting notification:", id, "by guide:", guideId, "or user:", userId);
+      if (!isTestEnv) {
+        console.log("Deleting notification:", id, "by guide:", guideId, "or user:", userId);
+      }
 
       const notification = await NotificationModel.findById(id);
 
@@ -144,7 +170,9 @@ export class NotificationController {
         message: "Notification deleted successfully",
       });
     } catch (error: any) {
-      console.error("Error deleting notification:", error);
+      if (!isTestEnv) {
+        console.error("Error deleting notification:", error);
+      }
       next(error);
     }
   };
@@ -160,10 +188,14 @@ export class NotificationController {
     try {
       const notification = new NotificationModel(data);
       await notification.save();
-      console.log("Created notification:", notification);
+      if (!isTestEnv) {
+        console.log("Created notification:", notification);
+      }
       return notification;
     } catch (error) {
-      console.error("Error creating notification:", error);
+      if (!isTestEnv) {
+        console.error("Error creating notification:", error);
+      }
       throw error;
     }
   };

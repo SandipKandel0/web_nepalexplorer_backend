@@ -8,6 +8,7 @@ import guideRequestRoutes from "./routes/guide_request_route";
 import destinationRoutes from "./routes/destination_route";
 
 const app = express();
+const isTestEnv = process.env.NODE_ENV === "test" || !!process.env.JEST_WORKER_ID;
 
 app.use(
   cors({
@@ -36,7 +37,7 @@ app.use((_req: Request, res: Response) => {
 });
 
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && !isTestEnv) {
     console.error("=== Error Handler Middleware ===");
     console.error("Error:", err);
     console.error("Error stack:", err?.stack);

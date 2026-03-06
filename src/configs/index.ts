@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
-dotenv.config();
+const isTestEnv = process.env.NODE_ENV === "test" || !!process.env.JEST_WORKER_ID;
+dotenv.config({ quiet: isTestEnv });
 
 //Application level constant and config
 export const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 5050;
