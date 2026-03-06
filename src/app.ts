@@ -37,13 +37,15 @@ app.use((_req: Request, res: Response) => {
 });
 
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  if (process.env.NODE_ENV !== "production" && !isTestEnv) {
+  const statusCode = err instanceof HttpError ? err.statusCode : 500;
+  const shouldLogVerbose = statusCode >= 500 || !(err instanceof HttpError);
+
+  if (process.env.NODE_ENV !== "production" && !isTestEnv && shouldLogVerbose) {
     console.error("=== Error Handler Middleware ===");
     console.error("Error:", err);
     console.error("Error stack:", err?.stack);
   }
 
-  const statusCode = err instanceof HttpError ? err.statusCode : 500;
   const message =
     err instanceof HttpError
       ? err.message

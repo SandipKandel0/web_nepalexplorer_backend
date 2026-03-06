@@ -62,6 +62,7 @@ export class GuideService {
       id: guide._id,
       fullName: guide.fullName,
       email: guide.email,
+      role: "guide",
       phone: guide.phone,
       language: guide.language,
       experience: guide.experience,
@@ -95,6 +96,7 @@ export class GuideService {
       id: guide._id,
       fullName: guide.fullName,
       email: guide.email,
+      role: "guide",
       phone: guide.phone,
       language: guide.language,
       experience: guide.experience,
@@ -136,6 +138,7 @@ export class GuideService {
         to: user.email,
         name: user.fullName,
         resetLink: userResetLink,
+        role: "user",
       });
       return;
     }
@@ -158,6 +161,7 @@ export class GuideService {
       to: guide.email,
       name: guide.fullName,
       resetLink,
+      role: "guide",
     });
   }
 

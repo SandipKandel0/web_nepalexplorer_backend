@@ -119,6 +119,7 @@ export class UserService {
         to: guide.email,
         name: guide.fullName,
         resetLink: guideResetLink,
+        role: "guide",
       });
       return;
     }
@@ -141,6 +142,7 @@ export class UserService {
       to: user.email,
       name: user.fullName,
       resetLink,
+      role: "user",
     });
   }
 

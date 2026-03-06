@@ -5,13 +5,46 @@ interface ResetEmailInput {
   to: string;
   name: string;
   resetLink: string;
+  role?: "user" | "guide";
 }
 
-const createTransporter = () => {
+const DEFAULT_ALLOWED_RESET_EMAILS = [
+  "itsmesandip.0@gmail.com",
+  "sandeepkandel45@gmail.com",
+];
+
+const getAllowedResetEmails = () => {
+  const configured = process.env.RESET_PASSWORD_ALLOWED_EMAILS;
+  if (!configured) {
+    return DEFAULT_ALLOWED_RESET_EMAILS;
+  }
+
+  return configured
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+};
+
+const isAllowedResetRecipient = (email: string) => {
+  const normalized = email.trim().toLowerCase();
+  return getAllowedResetEmails().includes(normalized);
+};
+
+const createTransporter = (role: "user" | "guide") => {
   const host = process.env.SMTP_HOST;
   const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const defaultUser = process.env.SMTP_USER;
+  const defaultPass = process.env.SMTP_PASS;
+
+  const user =
+    role === "guide"
+      ? process.env.SMTP_USER_GUIDE || defaultUser
+      : process.env.SMTP_USER_USER || defaultUser;
+
+  const pass =
+    role === "guide"
+      ? process.env.SMTP_PASS_GUIDE || defaultPass
+      : process.env.SMTP_PASS_USER || defaultPass;
 
   if (!host || !port || !user || !pass) {
     return null;
@@ -28,8 +61,13 @@ const createTransporter = () => {
   });
 };
 
-export const sendResetPasswordEmail = async ({ to, name, resetLink }: ResetEmailInput) => {
-  const transporter = createTransporter();
+export const sendResetPasswordEmail = async ({ to, name, resetLink, role = "user" }: ResetEmailInput) => {
+  // Restrict password reset delivery to explicit addresses only.
+  if (!isAllowedResetRecipient(to)) {
+    return;
+  }
+
+  const transporter = createTransporter(role);
 
   if (!transporter) {
     const requireSmtp = process.env.REQUIRE_SMTP === "true";
@@ -37,7 +75,7 @@ export const sendResetPasswordEmail = async ({ to, name, resetLink }: ResetEmail
     if (requireSmtp) {
       throw new HttpError(
         500,
-        "Email service is not configured. Please set SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS"
+        "Email service is not configured. Please set SMTP_HOST/SMTP_PORT and SMTP credentials (SMTP_USER/SMTP_PASS or role-specific SMTP_USER_GUIDE/SMTP_PASS_GUIDE)"
       );
     }
 
@@ -49,7 +87,10 @@ export const sendResetPasswordEmail = async ({ to, name, resetLink }: ResetEmail
     return;
   }
 
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@webnepal.local";
+  const fallbackFrom = process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@webnepal.local";
+  const userFrom = process.env.SMTP_FROM_USER || fallbackFrom;
+  const guideFrom = process.env.SMTP_FROM_GUIDE || fallbackFrom;
+  const from = role === "guide" ? guideFrom : userFrom;
 
   await transporter.sendMail({
     from,
