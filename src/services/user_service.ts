@@ -1,4 +1,5 @@
 import UserModel from "../models/user";
+import { GuideModel } from "../models/guide";
 import { HttpError } from "../errors/http-error";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -90,9 +91,35 @@ export class UserService {
   }
 
   async forgotPassword(email: string) {
-    const user = await UserModel.findOne({ email });
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await UserModel.findOne({ email: normalizedEmail });
 
     if (!user) {
+      // Fallback: if this email belongs to a guide, send guide reset link.
+      const guide = await GuideModel.findOne({ email: normalizedEmail });
+      if (!guide) {
+        return;
+      }
+
+      const guideToken = jwt.sign(
+        {
+          id: String(guide._id),
+          email: guide.email,
+          role: "guide",
+          purpose: "password-reset",
+        } as ResetTokenPayload,
+        process.env.JWT_SECRET || "your-secret-key",
+        { expiresIn: "15m" }
+      );
+
+      const frontendBaseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      const guideResetLink = `${frontendBaseUrl}/reset-password?token=${encodeURIComponent(guideToken)}&role=guide`;
+
+      await sendResetPasswordEmail({
+        to: guide.email,
+        name: guide.fullName,
+        resetLink: guideResetLink,
+      });
       return;
     }
 
