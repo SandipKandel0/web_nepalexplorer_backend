@@ -69,7 +69,7 @@ export class GuideController {
         throw new HttpError(400, "Email is required");
       }
 
-      await this.guideService.forgotPassword(email);
+      await this.guideService.forgotPassword(email.trim().toLowerCase());
 
       res.json({
         success: true,

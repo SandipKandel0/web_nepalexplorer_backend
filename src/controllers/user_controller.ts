@@ -69,7 +69,7 @@ export class UserController {
         throw new HttpError(400, "Email is required");
       }
 
-      await this.userService.forgotPassword(email);
+      await this.userService.forgotPassword(email.trim().toLowerCase());
 
       res.json({
         success: true,
