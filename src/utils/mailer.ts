@@ -32,10 +32,21 @@ export const sendResetPasswordEmail = async ({ to, name, resetLink }: ResetEmail
   const transporter = createTransporter();
 
   if (!transporter) {
-    throw new HttpError(
-      500,
-      "Email service is not configured. Please set SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS"
-    );
+    const requireSmtp = process.env.REQUIRE_SMTP === "true";
+
+    if (requireSmtp) {
+      throw new HttpError(
+        500,
+        "Email service is not configured. Please set SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS"
+      );
+    }
+
+    // Fallback mode: keep forgot-password flow working without SMTP.
+    console.warn("[MAILER] SMTP is not configured. Password reset email was not sent.");
+    console.warn(`[MAILER] To: ${to}`);
+    console.warn(`[MAILER] Name: ${name}`);
+    console.warn(`[MAILER] Reset link: ${resetLink}`);
+    return;
   }
 
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@webnepal.local";
@@ -46,18 +57,14 @@ export const sendResetPasswordEmail = async ({ to, name, resetLink }: ResetEmail
     subject: "Reset your password",
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-        <h2>Password Reset Request</h2>
         <p>Hello ${name},</p>
-        <p>We received a request to reset your password.</p>
+        <p>We received a request to reset your password. Click the button below to continue.</p>
         <p>
           <a href="${resetLink}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:10px 16px;text-decoration:none;border-radius:8px;">
             Reset Password
           </a>
         </p>
-        <p>If the button above does not work, copy and paste this URL into your browser:</p>
-        <p>${resetLink}</p>
-        <p>This link expires in 15 minutes.</p>
-        <p>If you did not request this, you can ignore this email.</p>
+        <p>Warning: If you did not request this reset, please ignore this email.</p>
       </div>
     `,
   });
